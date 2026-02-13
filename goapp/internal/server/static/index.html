@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Puncture Go</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --card: #fffdf8;
+      --ink: #172126;
+      --muted: #5d6a70;
+      --line: #d8cfbe;
+      --teal: #0f766e;
+      --orange: #c2410c;
+      --danger: #8b1d1d;
+      --ok-soft: #ddf6ee;
+      --warn-soft: #ffeede;
+      --danger-soft: #ffe6e6;
+      --info-soft: #eef4ff;
+      --radius: 14px;
+      --sans: "Avenir Next", "Trebuchet MS", "Lucida Grande", sans-serif;
+      --mono: Menlo, Consolas, Monaco, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(900px 420px at -8% -12%, #d8ece8 0%, transparent 60%),
+        radial-gradient(680px 340px at 110% 0%, #f8dcc7 0%, transparent 55%),
+        var(--bg);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 14px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    h1 { margin: 2px 0 8px; font-size: clamp(1.35rem, 4vw, 2rem); }
+    h2 { margin: 0 0 8px; font-size: 1.05rem; }
+    p { margin: 0 0 8px; }
+    .muted { color: var(--muted); }
+    .mono { font-family: var(--mono); font-size: 0.8rem; word-break: break-all; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .stat { border: 1px solid var(--line); border-radius: 10px; padding: 7px; background: #fff; }
+    .stat .label { color: var(--muted); font-size: 0.74rem; }
+    .stat .value { font-size: 1.12rem; font-weight: 700; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+    label { display: block; margin: 8px 0 4px; font-size: 0.82rem; font-weight: 700; }
+    input, select {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px;
+      padding: 8px 9px; font: inherit; color: var(--ink); background: #fff;
+    }
+
+    .btn {
+      appearance: none; border: 0; border-radius: 10px; cursor: pointer;
+      padding: 9px 11px; font: inherit; font-weight: 700;
+    }
+    .btn-primary { background: var(--teal); color: #fff; }
+    .btn-warn { background: var(--orange); color: #fff; }
+    .btn-danger { background: #f8dcdc; color: var(--danger); border: 1px solid #e8bcbc; }
+    .btn-ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+
+    .notice { border: 1px solid var(--line); border-radius: 10px; padding: 9px; font-weight: 700; }
+    .notice.success { background: var(--ok-soft); color: #0b4f49; }
+    .notice.warn { background: var(--warn-soft); color: #6f2d13; }
+    .notice.danger { background: var(--danger-soft); color: #7f1717; }
+    .notice.info { background: var(--info-soft); color: #1f4f7a; }
+
+    #tree_shell { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: #fff; }
+    .tree-legend { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { border-radius: 999px; padding: 4px 7px; font-size: 0.75rem; border: 1px solid var(--line); background: #fff; }
+    .chip.frontier { background: #d9f3ee; border-color: #b8e6db; color: #0b4f49; }
+    .chip.possible { background: #e8f7ec; border-color: #c8e9d1; color: #1d5c2f; }
+    .chip.derived { background: #fff0d0; border-color: #f0d7a2; color: #7b4d0a; }
+    .chip.blocked { background: #fee6e6; border-color: #efc2c2; color: #7c1d1d; }
+    .chip.removed { background: #f8d0d0; border-color: #e7abab; color: #8e1a1a; }
+
+    .table { width: 100%; border-collapse: collapse; }
+    .table td, .table th { border-bottom: 1px dashed #ece2cf; padding: 6px 4px; text-align: left; }
+    .table th { color: var(--muted); font-size: 0.76rem; }
+
+    .mapping { border: 1px solid #ece3d1; border-radius: 10px; padding: 8px; margin-top: 7px; background: #fffefb; }
+    .mapping.blocked { background: #ffe7e7; border-color: #eec2c2; color: #7b1c1c; }
+    .mapping.glow { border-color: #96dccc; background: #e9fffa; box-shadow: 0 0 0 2px rgba(30,154,132,0.18); }
+
+    .history { max-height: 260px; overflow: auto; }
+    .history-item { border-bottom: 1px solid #ece5d5; padding: 8px 0; }
+    .history-meta { color: var(--muted); font-size: 0.76rem; }
+
+    @media (max-width: 980px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 580px) {
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Puncture Go: macOS-primary forward secrecy</h1>
+      <p class="muted">Go implementation with tree-frontier visualization and local encryption/decryption workflow.</p>
+      <div id="top_notice" class="notice info">Loading state...</div>
+      <div class="stats" style="margin-top:8px">
+        <div class="stat"><div class="label">Active Nodes</div><div id="s_active_nodes" class="value">0</div></div>
+        <div class="stat"><div class="label">Puncture Events</div><div id="s_punctures" class="value">0</div></div>
+        <div class="stat"><div class="label">Cipher Mappings</div><div id="s_mappings" class="value">0</div></div>
+        <div class="stat"><div class="label">Blocked Mappings</div><div id="s_blocked" class="value">0</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Tree/Subtree Visualization</h2>
+      <p class="muted">Frontier roots are highlighted. Removed prior frontier after puncture is red. Impossible future subtrees are blocked.</p>
+      <div class="stats" style="margin-bottom:8px">
+        <div class="stat"><div class="label">Visible Frontier</div><div id="t_frontier" class="value">0</div></div>
+        <div class="stat"><div class="label">Blocked Nodes</div><div id="t_blocked" class="value">0</div></div>
+        <div class="stat"><div class="label">Removed Frontier</div><div id="t_removed" class="value">0</div></div>
+        <div class="stat"><div class="label">Projection Depth</div><div id="t_depth" class="value">0</div></div>
+      </div>
+      <div id="tree_shell"></div>
+      <div class="tree-legend">
+        <span class="chip frontier">Current frontier</span>
+        <span class="chip possible">Future derivable</span>
+        <span class="chip derived">Already derived branch</span>
+        <span class="chip blocked">Future impossible</span>
+        <span class="chip removed">Deleted frontier (last puncture)</span>
+      </div>
+      <p id="last_puncture_label" class="muted" style="margin-top:7px"></p>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>Derive / Puncture</h2>
+        <label for="provider_id">Provider ID</label>
+        <input id="provider_id" type="number" min="0" max="127" value="42" />
+        <label for="file_time_id">File/Time ID</label>
+        <input id="file_time_id" type="number" min="0" max="33554431" value="123456" />
+        <label for="purpose">Purpose / Description</label>
+        <input id="purpose" type="text" value="Demo key" maxlength="120" />
+        <div class="btn-row">
+          <button id="derive_btn" class="btn btn-primary">Derive Key</button>
+          <button id="puncture_btn" class="btn btn-warn">Puncture Tag</button>
+          <button id="reset_btn" class="btn btn-danger">Reset Lab</button>
+        </div>
+        <div style="margin-top:10px">
+          <div class="muted">Latest action</div>
+          <div id="last_action_title" style="font-weight:700"></div>
+          <div id="last_action_body"></div>
+          <div id="last_key_hex" class="mono" style="margin-top:6px"></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Providers</h2>
+        <label for="p_add_id">Add Provider ID</label>
+        <input id="p_add_id" type="number" min="0" max="127" value="99" />
+        <label for="p_add_name">Name</label>
+        <input id="p_add_name" type="text" value="New Provider" />
+        <label for="p_add_desc">Description</label>
+        <input id="p_add_desc" type="text" value="" />
+        <div class="btn-row">
+          <button id="p_add_btn" class="btn btn-primary">Add Provider</button>
+        </div>
+        <table class="table" style="margin-top:8px">
+          <thead><tr><th>ID</th><th>Name</th><th>Prefix</th><th>Delete</th></tr></thead>
+          <tbody id="providers_body"></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <h2>Assets: Upload -> Encrypt</h2>
+        <label for="upload_files">Files</label>
+        <input id="upload_files" type="file" multiple />
+        <label for="target_subdir">Target Subdir</label>
+        <input id="target_subdir" type="text" placeholder="optional/subdir" />
+        <div class="btn-row">
+          <button id="upload_btn" class="btn btn-ghost">Upload</button>
+          <button id="select_all_btn" class="btn btn-ghost">Select all</button>
+          <button id="clear_sel_btn" class="btn btn-ghost">Clear selection</button>
+        </div>
+
+        <label for="combo_quick">Quick key combo</label>
+        <select id="combo_quick"><option value="">Manual selection</option></select>
+
+        <label for="enc_provider_id">Encrypt with Provider ID</label>
+        <input id="enc_provider_id" type="number" min="0" max="127" value="42" />
+        <label for="enc_file_time_id">Encrypt with File/Time ID</label>
+        <input id="enc_file_time_id" type="number" min="0" max="33554431" value="123456" />
+        <label for="enc_purpose">Purpose</label>
+        <input id="enc_purpose" type="text" value="asset encryption" />
+        <div class="btn-row">
+          <button id="encrypt_btn" class="btn btn-primary">Encrypt Selected</button>
+        </div>
+
+        <table class="table" style="margin-top:9px">
+          <thead><tr><th></th><th>File</th><th>State</th><th>Meta</th></tr></thead>
+          <tbody id="files_body"></tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Ciphertext Mappings + Decrypt</h2>
+        <div id="mappings_list"></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>History</h2>
+      <div id="history_box" class="history"></div>
+    </section>
+  </main>
+
+  <script>
+    let appState = null;
+    let selected = new Set();
+
+    function el(id) { return document.getElementById(id); }
+
+    function showNotice(tone, message) {
+      const n = el('top_notice');
+      n.className = 'notice ' + tone;
+      n.textContent = message;
+    }
+
+    async function api(path, method='GET', body=null, isForm=false) {
+      const opts = { method };
+      if (body !== null) {
+        if (isForm) {
+          opts.body = body;
+        } else {
+          opts.headers = { 'Content-Type': 'application/json' };
+          opts.body = JSON.stringify(body);
+        }
+      }
+      const resp = await fetch(path, opts);
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        throw new Error(data.error || ('request failed: ' + resp.status));
+      }
+      return data;
+    }
+
+    function renderStats(state) {
+      el('s_active_nodes').textContent = String(state.active_nodes || 0);
+      el('s_punctures').textContent = String((state.puncture_log || []).length);
+      el('s_mappings').textContent = String((state.assets && state.assets.mapping_count) || 0);
+      el('s_blocked').textContent = String((state.assets && state.assets.blocked_count) || 0);
+    }
+
+    function renderTree(state) {
+      const t = state.tree_viz || {};
+      el('t_frontier').textContent = String(t.current_frontier_count || 0);
+      el('t_blocked').textContent = String(t.blocked_count || 0);
+      el('t_removed').textContent = String(t.removed_count || 0);
+      el('t_depth').textContent = String(t.depth || 0);
+      el('tree_shell').innerHTML = t.svg || '<p class="muted">No tree projection available.</p>';
+      if (t.last_puncture) {
+        el('last_puncture_label').textContent = 'Last puncture (' + t.last_puncture.time + '): ' + t.last_puncture.target_kind + ' ' + t.last_puncture.target;
+      } else {
+        el('last_puncture_label').textContent = 'No puncture yet. Root frontier covers full derivation space.';
+      }
+    }
+
+    function renderLastAction(state) {
+      const a = state.last_action || {};
+      el('last_action_title').textContent = a.title || '';
+      el('last_action_body').textContent = a.body || '';
+      el('last_key_hex').textContent = a.key_hex ? ('key: ' + a.key_hex) : '';
+    }
+
+    function renderProviders(state) {
+      const body = el('providers_body');
+      body.innerHTML = '';
+      (state.providers || []).forEach((p) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + p.provider_id + '</td><td>' + p.name + '</td><td class="mono">' + p.prefix + '</td>';
+        const td = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger';
+        btn.textContent = 'Delete+Puncture';
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete provider ' + p.provider_id + ' and puncture all keys?')) return;
+          try {
+            const out = await api('/api/providers/delete', 'POST', { provider_id: Number(p.provider_id) });
+            updateState(out.state);
+            showNotice('warn', 'Provider deleted and subtree punctured.');
+          } catch (err) {
+            showNotice('danger', String(err));
+          }
+        });
+        td.appendChild(btn);
+        tr.appendChild(td);
+        body.appendChild(tr);
+      });
+    }
+
+    function renderWorkflow(state) {
+      const w = state.workflow || {};
+      const files = w.files || [];
+      const combos = w.key_combo_options || [];
+      const body = el('files_body');
+      body.innerHTML = '';
+
+      const relset = new Set(files.map((f) => f.relpath));
+      selected = new Set([...selected].filter((p) => relset.has(p)));
+
+      files.forEach((f) => {
+        const tr = document.createElement('tr');
+        const c = document.createElement('input');
+        c.type = 'checkbox';
+        c.checked = selected.has(f.relpath);
+        c.addEventListener('change', () => {
+          if (c.checked) selected.add(f.relpath);
+          else selected.delete(f.relpath);
+        });
+        const td0 = document.createElement('td'); td0.appendChild(c);
+        const td1 = document.createElement('td'); td1.className = 'mono'; td1.textContent = f.relpath;
+        const td2 = document.createElement('td'); td2.textContent = f.lifecycle_label;
+        const td3 = document.createElement('td'); td3.textContent = f.size_label + ' · ' + f.modified_at;
+        tr.appendChild(td0); tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+        body.appendChild(tr);
+      });
+
+      const comboSel = el('combo_quick');
+      comboSel.innerHTML = '<option value="">Manual selection</option>';
+      combos.forEach((c) => {
+        const o = document.createElement('option');
+        o.value = String(c.provider_id) + '|' + String(c.file_time_id);
+        o.textContent = c.label;
+        comboSel.appendChild(o);
+      });
+      comboSel.onchange = () => {
+        if (!comboSel.value) return;
+        const parts = comboSel.value.split('|');
+        if (parts.length !== 2) return;
+        el('enc_provider_id').value = parts[0];
+        el('enc_file_time_id').value = parts[1];
+      };
+    }
+
+    function renderMappings(state) {
+      const wrap = el('mappings_list');
+      wrap.innerHTML = '';
+      const files = (state.assets && state.assets.asset_files) || [];
+      if (files.length === 0) {
+        wrap.innerHTML = '<p class="muted">No ciphertext mappings yet.</p>';
+        return;
+      }
+      files.forEach((f) => {
+        const box = document.createElement('div');
+        box.className = 'mapping';
+        box.innerHTML = '<strong>' + f.plaintext_relpath + '</strong><div class="muted">Mappings: ' + f.mapping_count + ' | Blocked: ' + f.blocked_count + '</div>';
+        (f.mappings || []).forEach((m) => {
+          const row = document.createElement('div');
+          row.className = 'mapping' + (m.show_red ? ' blocked' : '') + (m.show_glow ? ' glow' : '');
+          const head = document.createElement('div');
+          head.innerHTML = '<strong>Provider ' + m.provider_id + ' | Key ' + m.file_time_id + '</strong> <span class="muted">' + (m.is_accessible ? 'decryptable' : 'blocked') + '</span>';
+          const c = document.createElement('div');
+          c.className = 'mono';
+          c.textContent = 'cipher: ' + m.ciphertext_relpath;
+          const d = document.createElement('div');
+          d.className = 'muted';
+          d.textContent = m.last_decrypted_relpath ? ('last decrypted: ' + m.last_decrypted_relpath + ' (' + (m.last_decrypted_at || 'time unknown') + ')') : 'not decrypted yet';
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-ghost';
+          btn.textContent = m.is_accessible ? 'Decrypt To Filesystem' : 'Blocked (punctured key)';
+          btn.disabled = !m.is_accessible;
+          btn.addEventListener('click', async () => {
+            try {
+              const out = await api('/api/assets/decrypt', 'POST', { record_ids: [Number(m.record_id)] });
+              updateState(out.state);
+              showNotice(out.errors && out.errors.length ? 'warn' : 'success', 'Decryption finished.');
+            } catch (err) {
+              showNotice('danger', String(err));
+            }
+          });
+          row.appendChild(head); row.appendChild(c); row.appendChild(d); row.appendChild(btn);
+          box.appendChild(row);
+        });
+        wrap.appendChild(box);
+      });
+    }
+
+    function renderHistory(state) {
+      const box = el('history_box');
+      box.innerHTML = '';
+      const rows = state.history || [];
+      if (rows.length === 0) {
+        box.innerHTML = '<p class="muted">No actions yet.</p>';
+        return;
+      }
+      rows.forEach((h) => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML = '<div class="history-meta">' + h.time + ' | ' + h.action + ' | ' + h.status + '</div><div>' + h.summary + '</div>' + (h.path ? ('<div class="mono muted">' + h.path + '</div>') : '');
+        box.appendChild(item);
+      });
+    }
+
+    function updateState(state) {
+      appState = state;
+      renderStats(state);
+      renderTree(state);
+      renderLastAction(state);
+      renderProviders(state);
+      renderWorkflow(state);
+      renderMappings(state);
+      renderHistory(state);
+    }
+
+    async function refresh() {
+      const out = await api('/api/state');
+      updateState(out.state);
+    }
+
+    function wireActions() {
+      el('derive_btn').addEventListener('click', async () => {
+        try {
+          const out = await api('/api/derive', 'POST', {
+            provider_id: Number(el('provider_id').value),
+            file_time_id: Number(el('file_time_id').value),
+            purpose: el('purpose').value || ''
+          });
+          updateState(out.state);
+          showNotice('success', 'Derive completed.');
+        } catch (err) {
+          showNotice('danger', String(err));
+        }
+      });
+
+      el('puncture_btn').addEventListener('click', async () => {
+        try {
+          const out = await api('/api/puncture', 'POST', {
+            provider_id: Number(el('provider_id').value),
+            file_time_id: Number(el('file_time_id').value)
+          });
+          updateState(out.state);
+          showNotice('warn', 'Puncture processed.');
+        } catch (err) {
+          showNotice('danger', String(err));
+        }
+      });
+
+      el('reset_btn').addEventListener('click', async () => {
+        if (!confirm('Reset lab and destroy current state?')) return;
+        try {
+          const out = await api('/api/reset', 'POST');
+          selected.clear();
+          updateState(out.state);
+          showNotice('info', 'Lab reset completed.');
+        } catch (err) {
+          showNotice('danger', String(err));
+        }
+      });
+
+      el('p_add_btn').addEventListener('click', async () => {
+        try {
+          const out = await api('/api/providers/add', 'POST', {
+            provider_id: Number(el('p_add_id').value),
+            name: el('p_add_name').value,
+            description: el('p_add_desc').value
+          });
+          updateState(out.state);
+          showNotice('success', 'Provider added.');
+        } catch (err) {
+          showNotice('danger', String(err));
+        }
+      });
+
+      el('upload_btn').addEventListener('click', async () => {
+        const files = el('upload_files').files;
+        if (!files || files.length === 0) {
+          showNotice('warn', 'Select at least one file for upload.');
+          return;
+        }
+        const form = new FormData();
+        for (const f of files) form.append('files', f);
+        form.append('target_subdir', el('target_subdir').value || '');
+        try {
+          const out = await api('/api/assets/upload', 'POST', form, true);
+          (out.uploaded || []).forEach((p) => selected.add(p));
+          el('upload_files').value = '';
+          updateState(out.state);
+          showNotice('success', 'Upload completed.');
+        } catch (err) {
+          showNotice('danger', String(err));
+        }
+      });
+
+      el('select_all_btn').addEventListener('click', () => {
+        const files = ((appState || {}).workflow || {}).files || [];
+        files.forEach((f) => selected.add(f.relpath));
+        renderWorkflow(appState);
+      });
+
+      el('clear_sel_btn').addEventListener('click', () => {
+        selected.clear();
+        renderWorkflow(appState);
+      });
+
+      el('encrypt_btn').addEventListener('click', async () => {
+        if (selected.size === 0) {
+          showNotice('warn', 'Select at least one cleartext file before encryption.');
+          return;
+        }
+        try {
+          const out = await api('/api/assets/encrypt', 'POST', {
+            plaintext_relpaths: Array.from(selected),
+            provider_id: Number(el('enc_provider_id').value),
+            file_time_id: Number(el('enc_file_time_id').value),
+            purpose: el('enc_purpose').value || ''
+          });
+          selected.clear();
+          updateState(out.state);
+          showNotice((out.errors && out.errors.length) ? 'warn' : 'success', 'Encryption completed.');
+        } catch (err) {
+          showNotice('danger', String(err));
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      wireActions();
+      try {
+        await refresh();
+        showNotice('info', 'State loaded.');
+      } catch (err) {
+        showNotice('danger', String(err));
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Local runtime data / logs
+assets/
+*.log
+*.err.log
+state.json
+
+# Go / build outputs
+goapp/dist/
+goapp/ios/build-ios/
+
+# Xcode user/build artifacts
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Environment files
+.env
+
+# iOS packaged artifacts
+goapp/ios/dist/
